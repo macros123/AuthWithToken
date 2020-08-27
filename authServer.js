@@ -8,11 +8,11 @@ const jwt = require('jsonwebtoken')
 
 app.use(express.json())
 
-var mysql = require('mysql'); 
+var mysql = require('mysql');
 
 var con = mysql.createConnection({
   host: "localhost",
-  user: "macros",
+  user: "root",
   password: "Lavhaimt1",
   database: "test"
 });
@@ -55,14 +55,14 @@ app.post('/signin', (req, res) => {
                     refreshTokens.push(refreshToken)
                     res.json({accessToken: accessToken, message: 'успех', refreshToken: refreshToken})
                 }
-                else res.send('пароль не верный') 
+                else res.send('пароль не верный')
             }
         }
     });
 })
 
 function generateAccessToken(user) {
-    return jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '20s'})
+    return jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '20m'})
 }
 
 app.post('/signup', (req, res) => {
@@ -72,15 +72,15 @@ app.post('/signup', (req, res) => {
             if (result.length !== 0) res.sendStatus(403)
             else {
                 con.query(`insert into users values (NOW(), '${req.body.name}','${req.body.password}')`, function (err) {
-                    if (err) res.send(err); 
+                    if (err) res.send(err);
                     else res.sendStatus(201)
-                }); 
-            }            
-        }        
+                });
+            }
+        }
     });
 })
 
 app.listen(port, () => {
-  console.log(`Example app listening at http://localhost:${port}`) 
+  console.log(`Example app listening at http://localhost:${port}`)
 })
 
