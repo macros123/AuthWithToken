@@ -10,6 +10,20 @@ const jwt = require('jsonwebtoken')
 
 app.use(express.json())
 
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+
+    // authorized headers for preflight requests
+    // https://developer.mozilla.org/en-US/docs/Glossary/preflight_request
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    next();
+
+    app.options('*', (req, res) => {
+        // allowed XHR methods
+        res.header('Access-Control-Allow-Methods', 'GET, PATCH, PUT, POST, DELETE, OPTIONS');
+        res.send();
+    });
+});
 var mysql = require('mysql');
 
 var con = mysql.createConnection({
@@ -38,7 +52,7 @@ con.query('drop table IF EXISTS users', function (err) {
 const refreshTokens = []
 
 app.get('/new_token', (req, res) => {
-    const refreshToken = req.body.token
+    const refreshToken = req.body.refreshToken
     console.log(refreshToken)
     if(refreshToken == null) return res.sendStatus(403)
     else {
@@ -175,6 +189,35 @@ app.delete('/file/delete/:id', (req, res) => {
         if(result.affectedRows > 0) res.send({message: 'deleted'})
         else res.send({message: 'not found'})
     });
+})
+
+app.put('/file/update/:id', (req, res) => {
+    console.log(111111111111111111)
+    const query = `select * from files where id = ${req.params.id}`
+    con.query(query, function (err, result, fields) {
+        if(err) throw err
+        const form = new formidable.IncomingForm();
+        form.parse(req, function (err, fields, files) {
+            const file = files['/file/update']
+            const oldPath = file.path;
+            const newPath = './files/' + file.name;
+            const name = file.name;
+            const extension = file.name.split('.').pop();
+            const type = file.type.substring(0, 40);
+            const size = file.size;
+            fs.rename(oldPath, newPath, function (err) {
+                if (err) throw err;
+                con.query(`update files set name = "${name}", extension = "${extension}", type = "${type}", size = ${size}, date = NOW() where id = ${req.params.id}`, function (err) {
+                    if(err) throw err
+                    res.json({message: 'refresh'})
+                })
+            });
+        });
+    })
+
+
+
+
 })
 
 function authenticateToken(req, res, next) {
