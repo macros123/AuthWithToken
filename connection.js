@@ -10,26 +10,26 @@ const jwt = require('jsonwebtoken')
 
 app.use(express.json())
 
+//fix cors policy
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
 
-    // authorized headers for preflight requests
-    // https://developer.mozilla.org/en-US/docs/Glossary/preflight_request
     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
     next();
 
     app.options('*', (req, res) => {
-        // allowed XHR methods
         res.header('Access-Control-Allow-Methods', 'GET, PATCH, PUT, POST, DELETE, OPTIONS');
         res.send();
     });
 });
+
+
 var mysql = require('mysql');
 
 var con = mysql.createConnection({
   host: "localhost",
-  user: "root",
-  password: "Lavhaimt1",
+  user: "macros",
+  password: "Lavhaimt1", 
   database: "test"
 });
 
@@ -47,13 +47,27 @@ con.query('drop table IF EXISTS users', function (err) {
         })
     })
 })
+con.query('drop table IF EXISTS list', function (err) {
+    if(err) throw err
+    con.query('CREATE TABLE IF NOT EXISTS files (\
+        id int NOT NULL AUTO_INCREMENT,\
+        name varchar(45) DEFAULT NULL,\
+        extension varchar(45) DEFAULT NULL,\
+        type varchar(45) DEFAULT NULL,\
+        size int DEFAULT NULL,\
+        date datetime DEFAULT NULL,\
+        PRIMARY KEY (id)\
+      )', function (err) {
+        if(err) throw err
+        console.log('база файлов пересоздана')
+    })
+})
 /////AUTH
 
 const refreshTokens = []
 
 app.get('/new_token', (req, res) => {
     const refreshToken = req.body.refreshToken
-    console.log(refreshToken)
     if(refreshToken == null) return res.sendStatus(403)
     else {
         if(!refreshTokens.includes(refreshToken)) return res.sendStatus(403)
@@ -106,6 +120,9 @@ app.post('/signup', (req, res) => {
         }
     });
 })
+app.get('/logout', authenticateToken, (req, res) => {
+    res.json({accessToken: null}) //actualy need to delete auth token on client
+})
 ////
 
 
@@ -134,7 +151,7 @@ app.post('/file/upload', (req, res) => {
         const file = files['/file/upload']
         const oldPath = file.path;
         const newPath = './files/' + file.name;
-        const name = file.name;
+        const name = file.name.substring(0, 40);
         const extension = file.name.split('.').pop();
         const type = file.type.substring(0, 40);
         const size = file.size;
@@ -181,7 +198,7 @@ app.get('/file/download/:id', (req, res) => {
     })
 })
 
-
+//delete is only deleting from database, and dont delete from file system yet
 app.delete('/file/delete/:id', (req, res) => {
     const sql = `DELETE FROM files WHERE id = ${req.params.id}`;
     con.query(sql, function (err, result) {
@@ -191,8 +208,8 @@ app.delete('/file/delete/:id', (req, res) => {
     });
 })
 
+
 app.put('/file/update/:id', (req, res) => {
-    console.log(111111111111111111)
     const query = `select * from files where id = ${req.params.id}`
     con.query(query, function (err, result, fields) {
         if(err) throw err
@@ -214,10 +231,6 @@ app.put('/file/update/:id', (req, res) => {
             });
         });
     })
-
-
-
-
 })
 
 function authenticateToken(req, res, next) {
